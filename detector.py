@@ -1,6 +1,13 @@
-import os, time
+import os, sys, time, subprocess, importlib
 from collections import deque
 import cv2, numpy as np
+
+# Auto-repair OpenCV if conflicting builds exist in cloud environment
+if not hasattr(cv2, "CascadeClassifier"):
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python", "opencv-contrib-python", "opencv-python-headless"], check=False)
+    subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "opencv-python-headless==4.10.0.84"], check=False)
+    import cv2
+    importlib.reload(cv2)
 
 
 class DrowsinessDetector:
@@ -13,19 +20,13 @@ class DrowsinessDetector:
         self.target_w = shape[2] if shape[2] is not None else 96
         self.channels = shape[3] if len(shape) > 3 and shape[3] is not None else 3
 
-        # Resolve local cascades and cascade classifier class reliably across all environments
         base = os.path.dirname(os.path.abspath(__file__))
         c_dir = os.path.join(base, "cascades")
         f_p = os.path.join(c_dir, "haarcascade_frontalface_default.xml")
         e_p = os.path.join(c_dir, "haarcascade_eye.xml")
 
-        cc_cls = getattr(cv2, "CascadeClassifier", getattr(getattr(cv2, "objdetect", None), "CascadeClassifier", None))
-        if cc_cls is None:
-            import cv2.objdetect as objdetect
-            cc_cls = objdetect.CascadeClassifier
-
-        self.face_cascade = cc_cls(f_p)
-        self.eye_cascade = cc_cls(e_p)
+        self.face_cascade = cv2.CascadeClassifier(f_p)
+        self.eye_cascade = cv2.CascadeClassifier(e_p)
         self.history = deque(maxlen=20)
         self.smoothed_state, self.consecutive_drowsy, self.fps, self.prev_time = "Alert", 0, 0.0, time.time()
 
