@@ -1,4 +1,4 @@
-import time, av, streamlit as st
+import os, time, av, streamlit as st
 from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 from tensorflow.keras.models import load_model
 from alert import AlertManager
@@ -9,7 +9,9 @@ st.title("🚗 Driver Drowsiness Detection System")
 
 @st.cache_resource
 def get_detector():
-    return DrowsinessDetector(load_model("drowsiness_model.h5"))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(base_dir, "drowsiness_model.h5")
+    return DrowsinessDetector(load_model(model_path))
 
 detector = get_detector()
 if "alert_mgr" not in st.session_state:

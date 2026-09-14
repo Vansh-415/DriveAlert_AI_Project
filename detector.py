@@ -1,4 +1,4 @@
-import time
+import os, time
 from collections import deque
 import cv2, numpy as np
 
@@ -13,8 +13,15 @@ class DrowsinessDetector:
         self.target_w = shape[2] if shape[2] is not None else 96
         self.channels = shape[3] if len(shape) > 3 and shape[3] is not None else 3
 
-        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-        self.eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+        # Safe cascade resolution (local cascades/ directory first, fallback to cv2.data if available)
+        base = os.path.dirname(os.path.abspath(__file__))
+        c_dir = os.path.join(base, "cascades")
+        f_p, e_p = os.path.join(c_dir, "haarcascade_frontalface_default.xml"), os.path.join(c_dir, "haarcascade_eye.xml")
+        if not os.path.exists(f_p) and hasattr(cv2, "data") and hasattr(cv2.data, "haarcascades"):
+            f_p, e_p = cv2.data.haarcascades + "haarcascade_frontalface_default.xml", cv2.data.haarcascades + "haarcascade_eye.xml"
+
+        self.face_cascade = cv2.CascadeClassifier(f_p)
+        self.eye_cascade = cv2.CascadeClassifier(e_p)
         self.history = deque(maxlen=20)
         self.smoothed_state, self.consecutive_drowsy, self.fps, self.prev_time = "Alert", 0, 0.0, time.time()
 
